@@ -3,6 +3,8 @@
    Copyright Jens Brauer, 2018
 */ 
 
+require_once("fanartDownloader.php");
+
 /* ToDo: Use cache file to reduce API calls */
 
 $DEBUG = false;
@@ -134,44 +136,9 @@ echo $_GET['callback'] . '('.$response.')';
 
 
 /* UPDATE FANARTS */
-/* TODO: Use the database to store the informations and not an additional file */
-/* TODO: make functions in additional file */
-$file = 'lastshow.json';
-$string = file_get_contents($file);
-$json_a = json_decode($string, true);   //current fanart URLs from previous requests
-$json_b = json_decode($response, true); //latest request
+$fanart = new fanArtDownloader($db_file);
+$lastRequest = json_decode($response, true); //latest request
+$fanart->checkTvShowChange($lastRequest[0]['show']['ids']['tvdb']);
+$fanart->downloadImage();
 
-if (!($json_a['ids']['tvdb'] == $json_b[0]['show']['ids']['tvdb'])){
-	/* Update Poster */
-	$ch = curl_init();
-	curl_setopt($ch, CURLOPT_URL, 'http://webservice.fanart.tv/v3/tv/'.$json_b[0]['show']['ids']['tvdb'].'?api_key='.$fanart_api_key);
-	curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-	curl_setopt($ch, CURLOPT_HEADER, FALSE);
-
-	$response = curl_exec($ch);
-	curl_close($ch);
-
-	$fanarts = json_decode($response,true);
-	$output = '../../tv-movie/tvposter.jpg';
-	download_image1($fanarts['tvposter'][0]['url'],$output);
-}
-file_put_contents($file, json_encode($json_b[0]['show']));
-
-
-// takes URL of image and Path for the image as parameter
-function download_image1($image_url, $image_file){
-    $fp = fopen ($image_file, 'w+');              // open file handle
-
-    $ch = curl_init($image_url);
-    // curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // enable if you want
-    curl_setopt($ch, CURLOPT_FILE, $fp);          // output to file
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 1000);      // some large value to allow curl to run for a long time
-    curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0');
-    // curl_setopt($ch, CURLOPT_VERBOSE, true);   // Enable this line to see debug prints
-    curl_exec($ch);
-
-    curl_close($ch);                              // closing curl handle
-    fclose($fp);                                  // closing file handle
-}
 ?>
